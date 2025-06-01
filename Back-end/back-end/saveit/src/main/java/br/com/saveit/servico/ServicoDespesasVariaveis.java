@@ -65,9 +65,60 @@ public class ServicoDespesasVariaveis {
         return repositorioDespesas.save(despesas);
     }
 
-
     public List<String> listarPeriodicidadesPredefinidas() {
         return PERIODICIDADES_PREDEFINIDAS;
     }
+
+    public DespesasVariaveis editarDespesaVariavel(Long id, TelaDespesasVariaveis dto, Usuario usuario) {
+    DespesasVariaveis despesaExistente = (DespesasVariaveis) repositorioDespesas.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Despesa não encontrada"));
+
+    if (!despesaExistente.getUsuario().getId().equals(usuario.getId())) {
+        throw new SecurityException("Usuário não autorizado a editar esta despesa");
+    }
+
+    if (dto.getValor() == null || dto.getValor().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new IllegalArgumentException("O valor da despesa deve ser maior que zero.");
+    }
+
+    if (dto.getCategoria() == null || dto.getCategoria().trim().isEmpty() ||
+            !dto.getCategoria().matches("^[a-zA-ZÀ-ú ]+$") ||
+            dto.getCategoria().trim().length() > 100) {
+        throw new IllegalArgumentException("A categoria deve conter apenas letras e ter até 100 caracteres.");
+    }
+
+    if (dto.getPeriodicidade() == null || dto.getPeriodicidade().trim().isEmpty() ||
+            !PERIODICIDADES_PREDEFINIDAS.contains(dto.getPeriodicidade())) {
+        throw new IllegalArgumentException("Periodicidade inválida. As opções são: " + String.join(", ", PERIODICIDADES_PREDEFINIDAS));
+    }
+
+    Optional<Categoria> categoriaOptional = repositorioCategoria.findByNome(dto.getCategoria().trim());
+    Categoria categoria;
+
+    if (categoriaOptional.isPresent()) {
+        categoria = categoriaOptional.get();
+    } else {
+        categoria = new Categoria();
+        categoria.setNome(dto.getCategoria().trim());
+        repositorioCategoria.save(categoria);
+    }
+
+    despesaExistente.setValor(dto.getValor());
+    despesaExistente.setPeriodicidade(dto.getPeriodicidade());
+    despesaExistente.setCategoria(categoria);
+
+    return repositorioDespesas.save(despesaExistente);
+}
+
+public void excluirDespesaVariavel(Long id, Usuario usuario) {
+    DespesasVariaveis despesaExistente = (DespesasVariaveis) repositorioDespesas.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Despesa não encontrada"));
+
+    if (!despesaExistente.getUsuario().getId().equals(usuario.getId())) {
+        throw new SecurityException("Usuário não autorizado a excluir esta despesa");
+    }
+
+    repositorioDespesas.deleteById(id);
+}
 
 }

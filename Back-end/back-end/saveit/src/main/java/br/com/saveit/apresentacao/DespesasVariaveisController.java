@@ -64,5 +64,66 @@ public class DespesasVariaveisController {
     public ResponseEntity<List<String>> listarPeriodicidades() {
         return ResponseEntity.ok(servicoDespesasVariaveis.listarPeriodicidadesPredefinidas());
     }
+
+    @PutMapping("/editar/{id}")
+public ResponseEntity<Despesas> editarDespesaVariavel(
+        @PathVariable Long id,
+        @RequestBody TelaDespesasVariaveis telaDespesasVariaveis) {
+    try {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        String emailUsuarioLogado = authentication.getName();
+        Usuario usuarioAutenticado = servicoUsuarios.buscarPorEmail(emailUsuarioLogado);
+
+        if (usuarioAutenticado == null) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        Despesas despesaEditada = servicoDespesasVariaveis.editarDespesaVariavel(id, telaDespesasVariaveis, usuarioAutenticado);
+        return ResponseEntity.ok(despesaEditada);
+
+    } catch (IllegalArgumentException e) {
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    } catch (SecurityException e) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    } catch (Exception e) {
+        e.printStackTrace();
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
+    @DeleteMapping("/excluir/{id}")
+public ResponseEntity<Void> excluirDespesaVariavel(@PathVariable Long id) {
+    try {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        String emailUsuarioLogado = authentication.getName();
+        Usuario usuarioAutenticado = servicoUsuarios.buscarPorEmail(emailUsuarioLogado);
+
+        if (usuarioAutenticado == null) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        servicoDespesasVariaveis.excluirDespesaVariavel(id, usuarioAutenticado);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+    } catch (IllegalArgumentException e) {
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    } catch (SecurityException e) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    } catch (Exception e) {
+        e.printStackTrace();
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
 }
 

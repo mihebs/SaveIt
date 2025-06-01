@@ -65,4 +65,53 @@ public class ServicoDespesasFixas {
     public List<String> listarPeriodicidadesPredefinidas() {
         return PERIODICIDADES_PREDEFINIDAS;
     }
+
+    public DespesasFixas editarDespesaFixa(Long id, TelaDespesasFixas dto, Usuario usuario) {
+    DespesasFixas despesaExistente = (DespesasFixas) repositorioDespesas.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Despesa não encontrada"));
+
+    if (!despesaExistente.getUsuario().getId().equals(usuario.getId())) {
+        throw new SecurityException("Usuário não autorizado a editar esta despesa");
+    }
+
+    if (dto.getValor() == null || dto.getValor().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new IllegalArgumentException("O valor da despesa deve ser maior que zero.");
+    }
+    if (dto.getPeriodicidade() == null || dto.getPeriodicidade().trim().isEmpty() || !PERIODICIDADES_PREDEFINIDAS.contains(dto.getPeriodicidade().trim())) {
+        throw new IllegalArgumentException("Periodicidade inválida. As opções são: " + String.join(", ", PERIODICIDADES_PREDEFINIDAS));
+    }
+    if (dto.getCategoria() == null || dto.getCategoria().trim().isEmpty()) {
+        throw new IllegalArgumentException("A categoria não pode ser vazia.");
+    }
+
+    Optional<Categoria> categoriaOptional = repositorioCategoria.findByNome(dto.getCategoria().trim());
+    Categoria categoria;
+
+    if (categoriaOptional.isPresent()) {
+        categoria = categoriaOptional.get();
+    } else {
+        categoria = new Categoria();
+        categoria.setNome(dto.getCategoria().trim());
+        repositorioCategoria.save(categoria);
+    }
+
+    despesaExistente.setValor(dto.getValor());
+    despesaExistente.setPeriodicidade(dto.getPeriodicidade());
+    despesaExistente.setCategoria(categoria);
+
+    return repositorioDespesas.save(despesaExistente);
+}
+
+public void excluirDespesaFixa(Long id, Usuario usuario) {
+    DespesasFixas despesaExistente = (DespesasFixas) repositorioDespesas.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Despesa não encontrada"));
+
+    if (!despesaExistente.getUsuario().getId().equals(usuario.getId())) {
+        throw new SecurityException("Usuário não autorizado a excluir esta despesa");
+    }
+
+    repositorioDespesas.deleteById(id);
+}
+
+    
 }
